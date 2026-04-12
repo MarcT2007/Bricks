@@ -1,31 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sl">
 <head>
-	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<link rel="icon" href="slike/icon.png">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta charset="UTF-8">
-    <title>Breakout Game</title>
+    <title>Color Mix Breakout</title>
     <style>
-		body{
-			background-image:url("slike/ozadje.jpg");
-			background-repeat:no-repeat;
-			background-size:cover;
-		}
-        canvas {
-            border: 1px solid white;
-            display: block;
-            margin: auto;
-			margin-top:150px;
-			background-color:black;
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
+            background-color: #111;
         }
-		
+
+        /* Skupno ozadje za vse */
+        .ozadje {
+            background-image: url("slike/ozadje2.jpg");
+            background-size: cover;
+            background-position: center;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* ZAČETNI ZASLON */
+        #zacetni-zaslon {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 50px;
+            border-radius: 20px;
+            border: 2px solid #00d4ff;
+            max-width: 600px;
+        }
+
+        h1 { font-size: 3rem; color: #00d4ff; margin-bottom: 10px; }
+        
+        .navodila-box {
+            text-align: left;
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+
+        .barvna-legenda {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .gumb-start {
+            background: linear-gradient(45deg, #28a745, #218838);
+            border: none;
+            color: white;
+            padding: 20px 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border-radius: 50px;
+            transition: transform 0.2s;
+        }
+
+        .gumb-start:hover { transform: scale(1.1); }
+
+        /* IGRALNI ZASLON (skrit na začetku) */
+        #igra-zaslon {
+            display: none; 
+            text-align: center;
+        }
+
+        canvas {
+            border: 5px solid white;
+            background-color: black;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        .stats-bar {
+            font-size: 24px;
+            margin-bottom: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 10px;
+        }
     </style>
 </head>
-<body onload="initGame()">
-	<p>Točke: <mark id="tocke">0</mark></p>
-	<p>Time: <mark id="cas">00:00</mark></p>
+<body>
 
-    <canvas id="canvas" width="800" height="600"></canvas>
+    <div class="ozadje">
+        
+        <div id="zacetni-zaslon">
+            <h1>COLOR MIX</h1>
+            <p>Dobrodošli v barvnem izzivu!</p>
+            
+            <div class="navodila-box">
+                <p><b>Premikanje:</b> Puščice levo/desno</p>
+                <p><b>Barve:</b> Drži tipke 1, 2 ali 3</p>
+                
+                <div class="barvna-legenda">
+                    <div>1 = <span style="color:red">Rdeča</span></div>
+                    <div>1+2 = <span style="color:purple">Vijolična</span></div>
+                    <div>2 = <span style="color:lightblue">Modra</span></div>
+                    <div>2+3 = <span style="color:green">Zelena</span></div>
+                    <div>3 = <span style="color:yellow">Rumena</span></div>
+                    <div>1+3 = <span style="color:orange">Oranžna</span></div>
+                </div>
+                <p>💡 <i>Nasvet: Najprej uniči rdeče opeke, nato modre... postani mojster mešanja!</i></p>
+            </div>
+
+            <button class="gumb-start" onclick="preklopiNaIgro()">ZAČNI IGRO</button>
+        </div>
+
+        <div id="igra-zaslon">
+            <div class="stats-bar">
+                Točke: <span id="tocke" style="color: #ffd700;">0</span> | 
+                Čas: <span id="cas" style="color: #00d4ff;">00:00</span>
+            </div>
+            <canvas id="canvas" width="800" height="600"></canvas>
+        </div>
+
+    </div>
 
     <script src="js/code.js"></script>
+    <script>
+        function preklopiNaIgro() {
+            // Skrijemo meni, prikažemo igro
+            $("#zacetni-zaslon").fadeOut(500, function() {
+                $("#igra-zaslon").fadeIn(500);
+                initGame(); // To zažene tvojo JS kodo
+            });
+        }
+    </script>
 </body>
 </html>
