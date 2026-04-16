@@ -1,299 +1,140 @@
-// ==========================================
-// GLOBALNE SPREMENLJIVKE
-// ==========================================
-let canvas, ctx;
-let WIDTH, HEIGHT;
-let x, y;
-let dx = 3, dy = -5;
-let r = 10; 
-let ballcolor = "#FFFFFF"; 
-
+let canvas, ctx, WIDTH, HEIGHT, x, y, dx, dy;
+let r = 10, ballcolor = "#FFFFFF";
 let paddleW = 120, paddleH = 15, paddleX;
 let rightDown = false, leftDown = false;
-
-// OPEKE IN NIVOJI
-let NROWS = 3; 
-let NCOLS = 8;
+let NROWS = 3, NCOLS = 8;
 let BRICKWIDTH, BRICKHEIGHT = 20, PADDING = 4;
-let bricks = []; 
-let lockedBricks = []; 
-let intervalId, timerId;
+let bricks = [];
+let intervalId, timerId, skupneTocke = 0, sekunde = 0;
+let trenutniNivo = 1, start = false, isPaused = false;
+let keysPressed = {};
 
-var paddlecolor = "#808080"; 
-var skupneTocke = 0;
-var sekunde = 0;
-var start = false;
-let trenutniNivo = 1;
-
-// DEFINICIJA BARV
-const RED = "#FF1C0A";    
-const BLUE = "#0000FF";   
-const YELLOW = "#FFFF00"; 
-const PURPLE = "#800080"; 
-const GREEN = "#228B22";  
-const ORANGE = "#FFA500"; 
-const GRAY = "#808080"; 
-
-// ==========================================
-// POMOŽNE FUNKCIJE
-// ==========================================
-
-function formatirajCas(s) {
-    let m = Math.floor(s / 60);
-    let sek = s % 60;
-    return (m < 10 ? "0" + m : m) + ":" + (sek < 10 ? "0" + sek : sek);
-}
-
-function startGame() {
-    $("#zacetni-zaslon").fadeOut(300, function() {
-        $("#igra-zaslon").fadeIn(300);
-        initGame();
-    });
-}
+const RED = "#FF1C0A", BLUE = "#0000FF", YELLOW = "#FFFF00", 
+      PURPLE = "#800080", GREEN = "#228B22", ORANGE = "#FFA500", GRAY = "#808080"; 
 
 function initGame() {
     canvas = document.getElementById("canvas");
     ctx = canvas.getContext("2d");
-    WIDTH = canvas.width;
-    HEIGHT = canvas.height;
+    WIDTH = canvas.width; HEIGHT = canvas.height;
     paddleX = (WIDTH - paddleW) / 2;
-    
+    skupneTocke = 0; sekunde = 0;
+    $("#tocke").html(skupneTocke);
+    paddlecolor = GRAY;
     resetBall();
     initBricks();
-
-    document.removeEventListener("keydown", onKeyDown);
-    document.removeEventListener("keyup", onKeyUp);
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
-
     if (intervalId) clearInterval(intervalId);
     intervalId = setInterval(draw, 16);
-
     if (timerId) clearInterval(timerId);
-    timerId = setInterval(() => { if(start) sekunde++; }, 1000);
-    start = true;
+    timerId = setInterval(() => { if(start && !isPaused) sekunde++; }, 1000);
+    start = true; isPaused = false;
 }
 
 function initBricks() {
     BRICKWIDTH = (WIDTH / NCOLS) - PADDING;
     bricks = [];
-    lockedBricks = [];
     for (let i = 0; i < NROWS; i++) {
         bricks[i] = [];
-        lockedBricks[i] = [];
         for (let j = 0; j < NCOLS; j++) {
-            let mozneBarve = [];
-            if (trenutniNivo === 1) mozneBarve = [RED];
-            else if (trenutniNivo === 2) mozneBarve = [RED, BLUE];
-            else if (trenutniNivo === 3) mozneBarve = [RED, BLUE, YELLOW];
-            else if (trenutniNivo === 4) mozneBarve = [RED, BLUE, YELLOW, PURPLE];
-            else mozneBarve = [RED, BLUE, YELLOW, PURPLE, GREEN, ORANGE];
-
-            let selectedColor = mozneBarve[Math.floor(Math.random() * mozneBarve.length)];
-            bricks[i][j] = { 
-                color: selectedColor,
-                originalColor: selectedColor 
-            };
-            lockedBricks[i][j] = false;
+            let mozne = [RED];
+            if (trenutniNivo >= 2) mozne.push(BLUE);
+            if (trenutniNivo >= 3) mozne.push(YELLOW);
+            if (trenutniNivo >= 4) mozne.push(PURPLE);
+            if (trenutniNivo >= 5) mozne.push(GREEN, ORANGE);
+            let col = mozne[Math.floor(Math.random() * mozne.length)];
+            bricks[i][j] = { color: col, originalColor: col, timer: 0 };
         }
     }
 }
 
-function resetBall() {
-    x = WIDTH / 2;
-    y = HEIGHT - 50;
-    dx = 3;
-    dy = -5;
-    ballcolor = "#FFFFFF";
-}
+function resetBall() { x = WIDTH/2; y = HEIGHT-50; dx = 3; dy = -5; ballcolor = "#FFFFFF"; }
 
 function onKeyDown(evt) {
+    keysPressed[evt.key] = true;
+    if (evt.key === " ") { isPaused = !isPaused; return; }
     if (evt.key === "ArrowRight") rightDown = true;
     if (evt.key === "ArrowLeft") leftDown = true;
-
-    if (evt.key === "1") paddlecolor = RED;
-    if (evt.key === "2") paddlecolor = BLUE;
-    if (evt.key === "3") paddlecolor = YELLOW;
-    if (evt.key === "4") paddlecolor = PURPLE;
-    if (evt.key === "5") paddlecolor = GREEN;
-    if (evt.key === "6") paddlecolor = ORANGE;
+    posodobiBarvo();
 }
 
 function onKeyUp(evt) {
+    delete keysPressed[evt.key];
     if (evt.key === "ArrowRight") rightDown = false;
     if (evt.key === "ArrowLeft") leftDown = false;
+    // Prazna funkcija tukaj pomeni, da barva OSTANE zadnja pritisnjena
 }
 
-// ==========================================
-// GLAVNA ZANKA RISANJA IN LOGIKE
-// ==========================================
+function posodobiBarvo() {
+    // Logika drži barvo: nastavi se le ob pritisku tipk 1, 2, 3
+    if (keysPressed["1"] && keysPressed["2"]) paddlecolor = PURPLE;
+    else if (keysPressed["2"] && keysPressed["3"]) paddlecolor = GREEN;
+    else if (keysPressed["1"] && keysPressed["3"]) paddlecolor = ORANGE;
+    else if (keysPressed["1"]) paddlecolor = RED;
+    else if (keysPressed["2"]) paddlecolor = BLUE;
+    else if (keysPressed["3"]) paddlecolor = YELLOW;
+}
 
 function draw() {
-    if (!start) return;
-
+    if (!start || isPaused) {
+        if(isPaused) { ctx.fillStyle = "white"; ctx.font = "40px Arial"; ctx.fillText("PAVZA", WIDTH/2 - 65, HEIGHT/2); }
+        return;
+    }
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     circle(x, y, r, ballcolor);
-
     if (rightDown && paddleX + paddleW < WIDTH) paddleX += 10;
     if (leftDown && paddleX > 0) paddleX -= 10;
     rect(paddleX, HEIGHT - paddleH, paddleW, paddleH, paddlecolor);
-
-    let preostaleOpeke = 0;
 
     for (let i = 0; i < NROWS; i++) {
         for (let j = 0; j < NCOLS; j++) {
             let b = bricks[i][j];
             if (b.color !== 0) {
-                let brickX = j * (BRICKWIDTH + PADDING) + (PADDING / 2);
-                let brickY = i * (BRICKHEIGHT + PADDING) + (PADDING / 2);
-
-                rect(brickX, brickY, BRICKWIDTH, BRICKHEIGHT, b.color);
-                preostaleOpeke++;
-
-                let closestX = x;
-                let closestY = y;
-                if (x < brickX) closestX = brickX;
-                else if (x > brickX + BRICKWIDTH) closestX = brickX + BRICKWIDTH;
-                if (y < brickY) closestY = brickY;
-                else if (y > brickY + BRICKHEIGHT) closestY = brickY + BRICKHEIGHT;
-
-                let distanceX = x - closestX;
-                let distanceY = y - closestY;
-                let distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
-
-                if (distanceSquared < (r * r)) {
-                    let overlapX = 0, overlapY = 0;
-                    if (x < closestX) overlapX = (x + r) - brickX;
-                    else overlapX = closestX + BRICKWIDTH - (x - r);
-                    if (y < closestY) overlapY = (y + r) - brickY;
-                    else overlapY = closestY + BRICKHEIGHT - (y - r);
-
-                    if (overlapX < overlapY) {
-                        dx = -dx;
-                        if (x < closestX) x = brickX - r;
-                        else x = brickX + BRICKWIDTH + r;
-                    } else {
-                        dy = -dy;
-                        if (y < closestY) y = brickY - r;
-                        else y = brickY + BRICKHEIGHT + r;
+                if (b.timer > 0) {
+                    b.timer -= 16;
+                    if (b.timer <= 0) { b.color = b.originalColor; b.timer = 0; }
+                }
+                let bx = j * (BRICKWIDTH + PADDING) + (PADDING/2);
+                let by = i * (BRICKHEIGHT + PADDING) + (PADDING/2);
+                rect(bx, by, BRICKWIDTH, BRICKHEIGHT, b.color);
+                if (x + r > bx && x - r < bx + BRICKWIDTH && y + r > by && y - r < by + BRICKHEIGHT) {
+                    dy = -dy; 
+                    let ok = (ballcolor === b.color) || 
+                             (b.color === RED && (ballcolor === PURPLE || ballcolor === ORANGE)) ||
+                             (b.color === BLUE && (ballcolor === PURPLE || ballcolor === GREEN)) ||
+                             (b.color === YELLOW && (ballcolor === ORANGE || ballcolor === GREEN));
+                    if (ok && b.color !== GRAY) { 
+                        bricks[i][j].color = 0; skupneTocke++; $("#tocke").html(skupneTocke);
+                    } else if (b.color !== GRAY) {
+                        b.color = GRAY; b.timer = 6000;
                     }
-
-                    if (!lockedBricks[i][j]) {
-                        let canBreak = false;
-                        let bc = b.color;
-                        if (bc === RED && (ballcolor === RED || ballcolor === PURPLE || ballcolor === ORANGE)) canBreak = true;
-                        else if (bc === BLUE && (ballcolor === BLUE || ballcolor === PURPLE || ballcolor === GREEN)) canBreak = true;
-                        else if (bc === YELLOW && (ballcolor === YELLOW || ballcolor === ORANGE || ballcolor === GREEN)) canBreak = true;
-                        else if (bc === PURPLE && ballcolor === PURPLE) canBreak = true;
-                        else if (bc === GREEN && ballcolor === GREEN) canBreak = true;
-                        else if (bc === ORANGE && ballcolor === ORANGE) canBreak = true;
-
-                        if (canBreak) {
-                            bricks[i][j].color = 0;
-                            skupneTocke++;
-                            $("#tocke").html(skupneTocke);
-                        } else {
-                            let original = b.originalColor;
-                            bricks[i][j].color = GRAY;
-                            lockedBricks[i][j] = true;
-                            setTimeout(() => {
-                                if (bricks[i][j] && bricks[i][j].color !== 0) {
-                                    bricks[i][j].color = original;
-                                    lockedBricks[i][j] = false;
-                                }
-                            }, 3000);
-                        }
-                    }
+                    y += dy;
                 }
             }
         }
     }
-
-    if (preostaleOpeke === 0) {
-        start = false;
-        dx = 0; dy = 0; 
-        levelWin();
-        return;
-    }
-
     if (x + dx > WIDTH - r || x + dx < r) dx = -dx;
-    if (y + dy < r) {
-        y = r; 
-        dy = -dy;
-    } 
+    if (y + dy < r) dy = -dy; 
     else if (y + r > HEIGHT - paddleH) {
-        if (x > paddleX && x < paddleX + paddleW) {
-            y = HEIGHT - paddleH - r; 
-            ballcolor = paddlecolor; 
-            dx = 8 * ((x - (paddleX + paddleW / 2)) / paddleW);
-            dy = -Math.abs(dy);
-        } 
-        else if (y + r > HEIGHT) {
-            gameOver();
-            return;
-        }
+        if (x > paddleX && x < paddleX + paddleW) { ballcolor = paddlecolor; dy = -Math.abs(dy); y = HEIGHT-paddleH-r; }
+        else if (y + r > HEIGHT) { gameOver(); return; }
     }
-
     x += dx; y += dy;
     $("#cas").html(formatirajCas(sekunde));
+    if (bricks.every(row => row.every(b => b.color === 0))) { start = false; levelWin(); }
 }
 
-// ==========================================
-// KONEC IGRE IN ZMAGA (Brez črnega ozadja)
-// ==========================================
-
 function gameOver() {
-    start = false;
-    clearInterval(intervalId);
-    clearInterval(timerId);
-    Swal.fire({
-        title: 'Konec igre!',
-        html: `Točke: <b>${skupneTocke}</b>`,
-        icon: 'error',
-        backdrop: false, // Ta vrstica odstrani črnino/sivino v ozadju
-        confirmButtonText: 'Poskusi znova'
-    }).then(() => location.reload());
+    start = false; clearInterval(intervalId); clearInterval(timerId);
+    Swal.fire({ title: 'PORAZ!', html: `Čas: <b>${formatirajCas(sekunde)}</b><br>Točke: <b>${skupneTocke}</b>`, icon: 'error', heightAuto: false, scrollbarPadding: false }).then(() => location.reload());
 }
 
 function levelWin() {
     start = false;
-    if (trenutniNivo >= 5) {
-        Swal.fire({
-            title: 'Popolna zmaga!',
-            icon: 'success',
-            backdrop: false, // Odstrani črnino
-            confirmButtonText: 'Odlično!'
-        }).then(() => location.reload());
-    } else {
-        Swal.fire({
-            title: `Nivo ${trenutniNivo} opravljen!`,
-            icon: 'success',
-            backdrop: false, // Odstrani črnino
-            confirmButtonText: 'Naslednji nivo'
-        }).then(() => {
-            trenutniNivo++;
-            resetBall();
-            initBricks();
-            start = true;
-        });
-    }
+    let naslov = trenutniNivo >= 5 ? 'KONČNA ZMAGA!' : 'ZMAGA NA NIVOJU!';
+    Swal.fire({ title: naslov, html: `Čas: <b>${formatirajCas(sekunde)}</b><br>Točke: <b>${skupneTocke}</b>`, icon: 'success', heightAuto: false, scrollbarPadding: false }).then(() => { if(trenutniNivo < 5) { trenutniNivo++; initGame(); } else location.reload(); });
 }
 
-function circle(x, y, r, color) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI*2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.closePath();
-}
-
-function rect(x, y, w, h, color) {
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.closePath();
-}
+function formatirajCas(s) { let m=Math.floor(s/60); let sk=s%60; return (m<10?"0"+m:m)+":"+(sk<10?"0"+sk:sk); }
+function circle(x,y,r,c) { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=c; ctx.fill(); ctx.stroke(); ctx.closePath(); }
+function rect(x,y,w,h,c) { ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fillStyle=c; ctx.fill(); ctx.closePath(); }
